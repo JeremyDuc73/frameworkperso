@@ -1,0 +1,141 @@
+#!/usr/bin/env php
+<?php
+
+if($argv[1]==="serve")
+{
+    shell_exec("php -S localhost:8080 -t public");
+}
+
+if($argv[1]==="make:entity")
+{
+    print_r("\n");
+    $entityName = readline("Entity Name ? \n");
+
+
+    print_r("\n");
+
+    $tableName = readline("SQL Table Name ? \n");
+
+
+    print_r("\n");
+
+    $propertiesNames = [];
+    $propertiesTypes = [];
+    $propertyTest = readline("Do you want to add a property ? \n");
+    if ($propertyTest == "yes"){
+        $propertiesNames[] = readline("What is the name of your property ? \n");
+        print_r("\n");
+        $propertiesTypes[] = readline("What is the type of your property ? \n");
+        $propertyTest = readline("Do you want to add a new property ? \n");
+    }
+
+
+
+    makeEntityFile($entityName,$tableName, $propertiesNames, $propertiesTypes);
+    print_r("\n");
+    print_r("Your Entity was created as src/Entity/${entityName}.php");
+    print_r("\n");
+
+    print_r("\n");
+
+}
+
+if($argv[1]==="make:controller")
+{
+    print_r("\n");
+    $controllerName = readline("Controller Name ?");
+    $controllerFinalName = ucfirst($controllerName)."Controller.php";
+
+
+    touch("src/Controller/${controllerFinalName}");
+    mkdir("templates/".$controllerName);
+    touch("templates/$controllerName/index.test.html");
+    print_r("\n");
+    print_r("Your controller was created as src/Controller/$controllerFinalName");
+    print_r("\n");
+
+    print_r("A new template created as templates/${controllerName}/index.test.html");
+    print_r("\n");
+
+}
+
+function addProperty()
+{
+    //A FAIRE
+}
+function makeEntityFile($entityName, $tableName, $propertiesNames, $propertiesTypes)
+{
+    if ( !file_exists( "src/Entity" ) && !is_dir( "src/Entity" ) ) {
+        mkdir( "src/Entity" );
+    }
+    $properties = "";
+    foreach ($propertiesNames as $propertyName) {
+        foreach ($propertiesTypes as $propertyType)
+        $content =
+            "
+    #[Column(name: '${propertyName}')]
+    private ?${propertyType} $${propertyName} = null;          
+            ";
+        $properties = $properties.$content;
+    }
+
+    $entityName = ucfirst($entityName);
+
+    $repoName = $entityName."Repository";
+
+    $entityContent =
+        "<?php
+\n
+namespace App\Entity;
+\n
+use App\Repository\\$repoName;
+use Core\Attributes\Column;
+use Core\Attributes\Table;
+use Core\Attributes\TargetRepository;
+\n
+#[Table(name:'$tableName')]
+#[TargetRepository(name:$repoName::class)]
+\n
+class $entityName
+\n
+{
+    #[Column(name: 'id')]
+    private ?int \$id = null;
+    
+    $properties
+    
+    public function getId(): ?int
+    {
+        return \$this->id;
+    }
+}
+";
+
+    $entityFile = fopen("src/Entity/${entityName}.php", "w");
+    fwrite($entityFile,$entityContent);
+    fclose($entityFile);
+
+
+    if ( !file_exists( "src/Repository" ) && !is_dir( "src/Repository" ) ) {
+        mkdir( "src/Repository" );
+    }
+
+    $repoContent =
+        "<?php 
+\n
+namespace App\Repository;
+\n
+use App\Entity\\$entityName;
+\n
+\n
+class $repoName
+{
+\n
+public function __construct(){}
+}
+        ";
+
+    $repoFile = fopen("src/Repository/${repoName}.php", "w");
+    fwrite($repoFile, $repoContent);
+    fclose($repoFile);
+}
