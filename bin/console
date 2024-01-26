@@ -19,21 +19,14 @@ if($argv[1]==="make:entity")
 
     print_r("\n");
 
-    $propertiesNames = [];
-    $propertiesTypes = [];
-    $propertyTest = readline("Do you want to add a property ? \n");
-    if ($propertyTest == "yes"){
-        $propertiesNames[] = readline("What is the name of your property ? \n");
-        print_r("\n");
-        $propertiesTypes[] = readline("What is the type of your property ? \n");
-        $propertyTest = readline("Do you want to add a new property ? \n");
-    }
+    $properties = array();
+    $properties = addProperty($properties);
 
 
 
-    makeEntityFile($entityName,$tableName, $propertiesNames, $propertiesTypes);
+    makeEntityFile($entityName,$tableName, $properties);
     print_r("\n");
-    print_r("Your Entity was created as src/Entity/${entityName}.php");
+    print_r("Your Entity was created at src/Entity/${entityName}.php");
     print_r("\n");
 
     print_r("\n");
@@ -59,25 +52,39 @@ if($argv[1]==="make:controller")
 
 }
 
-function addProperty()
+function addProperty($properties)
 {
-    //A FAIRE
+    $propertyName = readline("What is the name of your property (press enter to stop) ? \n");
+    if ($propertyName === "")
+    {
+        return $properties;
+    }
+    $propertyType = readline("What is the type of your property ? \n");
+    print_r("\n");
+    $properties [] = array(
+            "name"=>$propertyName,
+            "type"=>$propertyType
+    );
+    return addProperty($properties);
 }
-function makeEntityFile($entityName, $tableName, $propertiesNames, $propertiesTypes)
+function makeEntityFile($entityName, $tableName, $properties): void
 {
+    $returnedProperties = "";
     if ( !file_exists( "src/Entity" ) && !is_dir( "src/Entity" ) ) {
         mkdir( "src/Entity" );
     }
-    $properties = "";
-    foreach ($propertiesNames as $propertyName) {
-        foreach ($propertiesTypes as $propertyType)
-        $content =
-            "
-    #[Column(name: '${propertyName}')]
-    private ?${propertyType} $${propertyName} = null;          
+    if ($properties)
+    {
+        foreach ($properties as $property) {
+            $content =
+                "
+    #[Column(name: '${property["name"]}')]
+    private ?${property["type"]} $${property["name"]} = null;          
             ";
-        $properties = $properties.$content;
+            $returnedProperties = $returnedProperties.$content;
+        }
     }
+
 
     $entityName = ucfirst($entityName);
 
@@ -95,14 +102,12 @@ use Core\Attributes\TargetRepository;
 \n
 #[Table(name:'$tableName')]
 #[TargetRepository(name:$repoName::class)]
-\n
 class $entityName
-\n
 {
     #[Column(name: 'id')]
     private ?int \$id = null;
     
-    $properties
+    $returnedProperties
     
     public function getId(): ?int
     {
