@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+require_once "vendor/autoload.php";
 
 if($argv[1]==="serve")
 {
@@ -10,27 +11,44 @@ if($argv[1]==="make:entity")
 {
     print_r("\n");
     $entityName = readline("Entity Name ? \n");
-
-
-    print_r("\n");
-
-    $tableName = readline("SQL Table Name ? \n");
-
+    $entityName = ucfirst($entityName);
 
     print_r("\n");
 
-    $properties = array();
+    if (!file_exists("src/Entity/${entityName}.php"))
+    {
+        $tableName = readline("SQL Table Name ? \n");
+        print_r("\n");
+        $properties = array();
+    } else {
+        print_r("Your entity already exists, let's add some fields\n");
+        $tableName = $entityName;
+        $tmp = 'App\Entity\\'.$entityName;
+        $entityToGet = new $tmp();
+        $entity = new ReflectionClass($entityToGet);
+        $propertiesInEntity = $entity->getProperties();
+        foreach ($propertiesInEntity as $property)
+        {
+            if ($property->getName() !== "id")
+            {
+                $propertyEntityName = $property->getName();
+                $propertyEntityType = $property->getType()->getName();
+                $properties [] = array(
+                    "name"=>$propertyEntityName,
+                    "type"=>$propertyEntityType
+                );
+            }
+        }
+    }
+
     $properties = addProperty($properties);
-
 
 
     makeEntityFile($entityName,$tableName, $properties);
     print_r("\n");
     print_r("Your Entity was created at src/Entity/${entityName}.php");
     print_r("\n");
-
     print_r("\n");
-
 }
 
 if($argv[1]==="make:controller")
@@ -60,6 +78,32 @@ function addProperty($properties)
         return $properties;
     }
     $propertyType = readline("What is the type of your property ? \n");
+    if ($propertyType === "relation")
+    {
+        $entityRelated = readline("What class should this entity be related to ? \n");
+        print_r("
+ What type of relationship is this?
+ ------------ ---------------------------------------------------------------- 
+  Type         Description                                                     
+ ------------ ---------------------------------------------------------------- 
+  ManyToOne    Each Test relates to (has) one Bed.                             
+               Each Bed can relate to (can have) many Test objects.            
+                                                                               
+  OneToMany    Each Test can relate to (can have) many Bed objects.            
+               Each Bed relates to (has) one Test.                             
+                                                                               
+  ManyToMany   Each Test can relate to (can have) many Bed objects.            
+               Each Bed can also relate to (can also have) many Test objects.  
+                                                                               
+  OneToOne     Each Test relates to (has) exactly one Bed.                     
+               Each Bed also relates to (has) exactly one Test.                
+ ------------ ----------------------------------------------------------------
+        ");
+        $relationType = readline("Relation type ? \n");
+        $relationType = strtolower($relationType);
+        $relationType = checkRelationType($relationType);
+        // UTILISER LA REFLECTION POUR LES RELATIONS
+    }
     $propertyType = checkType($propertyType);
     print_r("\n");
     $properties [] = array(
@@ -71,12 +115,22 @@ function addProperty($properties)
 
 function checkType($propertyType)
 {
-    $defaultPropertyTypes = ["int", "string", "array"];
+    $defaultPropertyTypes = ["int", "string", "array", "relation"];
     if (in_array($propertyType, $defaultPropertyTypes)){
         return $propertyType;
     }
-    $NewPropertyType = readline("Wrong type given try another one : ");
-    return checkType($NewPropertyType);
+    $newPropertyType = readline("Wrong type given try another one : ");
+    return checkType($newPropertyType);
+}
+function checkRelationType($relationType)
+{
+    $defaultRelationTypes = ["manytomany", "manytoone", "onetomany", "onetoone"];
+    if (in_array($relationType, $defaultRelationTypes))
+    {
+        return $relationType;
+    }
+    $newRelationType = readline("Wrong relation type given try another one : ");
+    return checkRelationType($newRelationType);
 }
 
 function makeEntityFile($entityName, $tableName, $properties): void
@@ -117,7 +171,7 @@ function makeEntityFile($entityName, $tableName, $properties): void
 
 
 
-    $entityName = ucfirst($entityName);
+
 
     $repoName = $entityName."Repository";
 
@@ -146,7 +200,7 @@ class $entityName
     $methodsProperties
 }";
 
-    if (file_exists("src/Entity/${entityName}.php"))
+    /*if (file_exists("src/Entity/${entityName}.php"))
     {
         function stringBetweenTwoStrings($str, $starting_word, $ending_word)
         {
@@ -163,16 +217,14 @@ class $entityName
         $endFileFirstStep = str_replace($startContent, "", $fileContent);
         $endFile = str_replace($substring, "", $endFileFirstStep);
         $newFileContent = $newFileContent.$endFile;
-        //$addMethods = str_replace(substr($newFileContent, -1),"", $newFileContent);
-        //$addMethods = $addMethods.$methodsProperties;
-        //$newFileContent = $newFileContent.$addMethods."}";
+        $addMethods = str_replace(substr($newFileContent, -1),"", $newFileContent);
+        $addMethods = $addMethods.$methodsProperties;
+        $newFileContent = $newFileContent.$addMethods."}";
         file_put_contents("src/Entity/${entityName}.php", $newFileContent);
-    } else {
-        $entityFile = fopen("src/Entity/${entityName}.php", "w");
-        fwrite($entityFile,$entityContent);
-        fclose($entityFile);
-    }
-
+    }*/
+    $entityFile = fopen("src/Entity/${entityName}.php", "w");
+    fwrite($entityFile, $entityContent);
+    fclose($entityFile);
 
     if ( !file_exists( "src/Repository" ) && !is_dir( "src/Repository" ) ) {
         mkdir( "src/Repository" );
